@@ -7,8 +7,8 @@ CBINDGEN := cbindgen
 CBINDGEN_CFG := cbindgen.toml
 CRATE := irohffi
 OUT_H := libirohffi.h
-DEST_INCLUDE := ../include
-DEST_LIB := ../lib/linux_amd64
+DEST_INCLUDE := ../ffi/include
+DEST_LIB := ../ffi/lib/linux_amd64
 TARGET_LIB := target/release/libirohffi.a
 GO_BUILD_FLAGS=""
 all: build-rust build-go
@@ -24,4 +24,4 @@ build-rust:
 	cp $(TARGET_LIB) $(DEST_LIB)/libirohffi.a
 
 build-go: build-rust
-	@go build $(GO_BUILD_FLAGS) -o build/libp2p-iroh-transport
+	@go build $(GO_BUILD_FLAGS)

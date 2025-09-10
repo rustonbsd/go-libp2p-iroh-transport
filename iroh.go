@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/transport"
-	libirohffi "github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
+	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 
 	logging "github.com/ipfs/go-log/v2"
 	ma "github.com/multiformats/go-multiaddr"
@@ -49,8 +49,8 @@ type IrohTransport struct {
 
 	rcmgr network.ResourceManager
 
-	handle libirohffi.TransportHandle
-	node   libirohffi.NodeHandle
+	handle ffi.TransportHandle
+	node   ffi.NodeHandle
 
 	localAddr *net.TCPAddr
 }
@@ -65,7 +65,7 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 	if rcmgr == nil {
 		rcmgr = &network.NullResourceManager{}
 	}
-	transportHandle, err := libirohffi.NewTransport()
+	transportHandle, err := ffi.NewTransport()
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 		return nil, fmt.Errorf("failed to get raw private key: %w", err)
 	}
 
-	node, err := libirohffi.NewNode(privKeyBytes, p)
+	node, err := ffi.NewNode(privKeyBytes, p)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.I
 		defer cancel()
 	}
 
-	h, err := libirohffi.Dial(t.node, p)
+	h, err := ffi.Dial(t.node, p)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.I
 	// IP zero + port 0 is acceptable; upgrader will embed it into a /ip4/0.0.0.0/tcp/0 multiaddr.
 	la := t.localAddr
 
-	nc := libirohffi.WrapStream(h, la, rna)
+	nc := ffi.WrapStream(h, la, rna)
 	return manet.WrapNetConn(nc)
 }
 
@@ -206,7 +206,7 @@ func (t *IrohTransport) UseReuseport() bool {
 }
 
 func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
-	h, err := libirohffi.Listen(t.node, laddr.String())
+	h, err := ffi.Listen(t.node, laddr.String())
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func (t *IrohTransport) String() string {
 	return "IROH"
 }
 
-func WithIrohNode(h libirohffi.NodeHandle) Option {
+func WithIrohNode(h ffi.NodeHandle) Option {
 	return func(tr *IrohTransport) error {
 		tr.node = h
 		return nil
