@@ -41,7 +41,3 @@ Artifacts:
 - Ed25519 only; we verify the private key matches the PeerID
 - One iroh runtime/transport per process (current design)
 - Expand target platforms by adding staticlibs for those triples
-
-## License
-
-MIT
