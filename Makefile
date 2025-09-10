@@ -10,7 +10,7 @@ OUT_H := libirohffi.h
 DEST_INCLUDE := ../include
 DEST_LIB := ../lib/linux_amd64
 TARGET_LIB := target/release/libirohffi.a
-GO_BUILD_FLAGS="-trimpath -ldflags"
+GO_BUILD_FLAGS=""
 all: build-rust build-go
 
 .PHONY: build-rust
@@ -24,4 +24,4 @@ build-rust:
 	cp $(TARGET_LIB) $(DEST_LIB)/libirohffi.a
 
 build-go: build-rust
-	@go build $(GO_BUILD_FLAGS) -o build/libp2p-iroh-transport iroh.go
+	@go build $(GO_BUILD_FLAGS) -o build/libp2p-iroh-transport

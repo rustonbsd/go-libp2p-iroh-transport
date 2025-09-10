@@ -62,7 +62,6 @@ var _ transport.DialUpdater = &IrohTransport{}
 // created.
 func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager, h host.Host, p peer.ID, opts ...Option) (*IrohTransport, error) {
 
-	fmt.Println("[IROH-TRANSPORT] NewIrohTransport")
 	if rcmgr == nil {
 		rcmgr = &network.NullResourceManager{}
 	}
@@ -116,8 +115,7 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 // it could dial TCP, UDP, nothing else tested yet.
 // [!] todo: test all defradb available transports and see if it works univerally on all platforms (so far only tested on linux/amd64)
 func (t *IrohTransport) CanDial(addr ma.Multiaddr) bool {
-	return mafmt.Or(mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)), mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_UDP))).Matches(addr) ||
-		mafmt.Or(mafmt.And(mafmt.Base(ma.P_IP6), mafmt.Base(ma.P_TCP)), mafmt.And(mafmt.Base(ma.P_IP6), mafmt.Base(ma.P_UDP))).Matches(addr)
+	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)).Matches(addr)
 }
 
 func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.ID) (manet.Conn, error) {
@@ -223,7 +221,7 @@ func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
 // Protocols returns the list of terminal protocols this transport can dial.
 // [!] todo: adjust protocols [blocked]: refactor with mutiaddress for iroh
 func (t *IrohTransport) Protocols() []int {
-	return []int{ma.P_P2P, ma.P_TCP, ma.P_UDP}
+	return []int{ma.P_TCP}
 }
 
 // [!] todo: is this comment still right for iroh? it is a proxy sooo?:
@@ -238,7 +236,6 @@ func (t *IrohTransport) String() string {
 
 func WithIrohNode(h libirohffi.NodeHandle) Option {
 	return func(tr *IrohTransport) error {
-		fmt.Println("[IROH-TRANSPORT] WithIrohNode", h)
 		tr.node = h
 		return nil
 	}
