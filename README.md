@@ -7,6 +7,10 @@ A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rus
 - ALPN: /libp2p/iroh/0.1.0
 - One global iroh runtime per process
 
+## Thoughts
+- Switch back to dyn lib again, extract .so at runtime? smaller binary but depends on your goals
+
+
 ## Status
 
 - Dial, listen, accept, read, write, close: working
@@ -41,3 +45,4 @@ Artifacts:
 - Ed25519 only; we verify the private key matches the PeerID
 - One iroh runtime/transport per process (current design)
 - Expand target platforms by adding staticlibs for those triples
+
