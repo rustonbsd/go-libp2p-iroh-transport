@@ -25,7 +25,16 @@ bs58 = "0.5"
 [lib]
 name = "irohffi"
 path = "src/lib.rs"
-crate-type = ["staticlib", "rlib"]
+crate-type = ["staticlib", "cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+debug = false
+incremental = false
 
 
 [[example]]

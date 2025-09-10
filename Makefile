@@ -9,7 +9,7 @@ CRATE := irohffi
 OUT_H := libirohffi.h
 DEST_INCLUDE := ../ffi/include
 DEST_LIB := ../ffi/lib/linux_amd64
-TARGET_LIB := target/release/libirohffi.a
+TARGET_LIB := target/release/libirohffi.so
 GO_BUILD_FLAGS=""
 all: build-rust build-go
 
@@ -21,7 +21,7 @@ build-rust:
 	mkdir -p $(DEST_INCLUDE) && \
 	cp $(OUT_H) $(DEST_INCLUDE)/$(OUT_H) && \
 	mkdir -p $(DEST_LIB) && \
-	cp $(TARGET_LIB) $(DEST_LIB)/libirohffi.a
+	cp $(TARGET_LIB) $(DEST_LIB)/libirohffi.so
 
 build-go: build-rust
 	@go build $(GO_BUILD_FLAGS)
