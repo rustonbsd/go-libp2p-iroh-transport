@@ -215,10 +215,9 @@ func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
 
 	listen := irohListener{h: h, lma: laddr}
 
-	// Gate the multiaddr listener and upgrade the gated manet listener.
+	// Upgrade the manet listener (connection gating handled by libp2p stack if configured).
 	maListener := manet.Listener(listen)
-	gated := t.upgrader.GateMaListener(maListener)
-	return t.upgrader.UpgradeGatedMaListener(t, gated), nil
+	return t.upgrader.UpgradeListener(t, maListener), nil
 }
 
 // Protocols returns the list of terminal protocols this transport can dial.
@@ -239,6 +238,7 @@ func (t *IrohTransport) String() string {
 
 func WithIrohNode(h libirohffi.NodeHandle) Option {
 	return func(tr *IrohTransport) error {
+		fmt.Println("[IROH-TRANSPORT] WithIrohNode", h)
 		tr.node = h
 		return nil
 	}

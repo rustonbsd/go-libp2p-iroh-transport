@@ -1,6 +1,6 @@
 module github.com/rustonbsd/go-libp2p-iroh-transport
 
-go 1.24.6
+go 1.24
 
 require (
 	github.com/ipfs/go-log/v2 v2.6.0
