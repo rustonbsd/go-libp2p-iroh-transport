@@ -3,9 +3,9 @@ module github.com/rustonbsd/go-libp2p-iroh-transport
 go 1.24.6
 
 require (
-	github.com/ipfs/go-log/v2 v2.8.1
-	github.com/libp2p/go-libp2p v0.43.0
-	github.com/multiformats/go-multiaddr v0.16.1
+	github.com/ipfs/go-log/v2 v2.6.0
+	github.com/libp2p/go-libp2p v0.41.0
+	github.com/multiformats/go-multiaddr v0.15.0
 	github.com/multiformats/go-multiaddr-fmt v0.1.0
 )
 
