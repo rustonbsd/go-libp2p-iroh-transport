@@ -115,7 +115,7 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 // it could dial TCP, UDP, nothing else tested yet.
 // [!] todo: test all defradb available transports and see if it works univerally on all platforms (so far only tested on linux/amd64)
 func (t *IrohTransport) CanDial(addr ma.Multiaddr) bool {
-	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)).Matches(addr)
+	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_P2P)).Matches(addr)
 }
 
 func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.ID) (manet.Conn, error) {
