@@ -3,7 +3,7 @@ package iroh
 import (
 	"context"
 	"fmt"
-	"go-libp2p-iroh-transport/ffi"
+	"iroh-transport/ffi"
 	"testing"
 	"time"
 
