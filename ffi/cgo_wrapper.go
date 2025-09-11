@@ -44,7 +44,6 @@ static int load_symbol(void** target, const char* name) {
     *target = dlsym(lib_handle, name);
     if (!*target) {
         const char* err = dlerror();
-        fprintf(stderr, "dlsym failed for %s: %s\n", name, err ? err : "(nil)");
         return -1;
     }
     return 0;
@@ -53,7 +52,6 @@ static int load_symbol(void** target, const char* name) {
 int load_library(const char* path) {
     lib_handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (!lib_handle) {
-        fprintf(stderr, "dlopen failed: %s\n", dlerror());
         return -1;
     }
     return 0;
@@ -123,8 +121,6 @@ int32_t iroh_stream_close(struct IrohStreamHandle stream) {
 }
 
 int32_t iroh_shutdown() {
-	printf("[C] iroh_shutdown called, ptr=%p\n", iroh_shutdown_ptr);
-	fflush(stdout);
     if (!iroh_shutdown_ptr) return -1;
     return iroh_shutdown_ptr();
 }
@@ -182,8 +178,6 @@ func Init() {
 	extractOnce.Do(func() {
 		var libData []byte
 		var filename string
-
-		fmt.Printf("goruntime: %s", runtime.GOARCH)
 
 		switch runtime.GOARCH {
 		case "amd64":

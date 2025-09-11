@@ -1,4 +1,4 @@
-module github.com/rustonbsd/go-libp2p-iroh-transport
+module go-libp2p-iroh-transport
 
 go 1.24
 

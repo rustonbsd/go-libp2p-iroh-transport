@@ -58,7 +58,6 @@ func (c *irohConn) Write(p []byte) (int, error) {
 func (c *irohConn) Close() error {
 	rc := C.iroh_stream_close(c.h)
 	if rc != 0 {
-		fmt.Printf("iroh_stream_close rc=%d\n", int(rc))
 		return fmt.Errorf("iroh_stream_close rc=%d", int(rc))
 	}
 	return nil

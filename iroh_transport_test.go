@@ -3,6 +3,7 @@ package iroh
 import (
 	"context"
 	"fmt"
+	"go-libp2p-iroh-transport/ffi"
 	"testing"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	transport2 "github.com/libp2p/go-libp2p/core/transport"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 )
 
 // buildTestHost creates a libp2p host that ONLY uses the iroh transport.
