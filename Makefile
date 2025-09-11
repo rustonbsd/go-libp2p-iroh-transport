@@ -6,7 +6,7 @@ RUST_TARGETS := \
 LIBS_DIR := ffi/libs
 INCLUDE_DIR := ffi/include
 
-all: install-cross-tools install-targets build-rust-linux
+all: install-tools install-targets build-rust-linux
 
 .PHONY: install-targets
 install-targets:
@@ -15,8 +15,8 @@ install-targets:
 		rustup target add $$target; \
 	done
 
-.PHONY: install-cross-tools
-install-cross-tools:
+.PHONY: install-tools
+install-tools:
 	@echo "Installing cross-compilation tools..."
 	sudo apt-get update
 	sudo apt-get install -y gcc-aarch64-linux-gnu

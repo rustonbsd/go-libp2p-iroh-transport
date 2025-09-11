@@ -49,7 +49,6 @@ pub fn runtime_handle() -> anyhow::Result<tokio::runtime::Handle> {
             Mutex::new(Some(runtime))
         });
     }
-    println!("runtime_handle called {}", RUNTIME_HANDLE.get().is_some());
     Ok(RUNTIME_HANDLE
         .get()
         .ok_or_else(|| anyhow::anyhow!("runtime not initialized"))?
