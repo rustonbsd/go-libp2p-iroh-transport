@@ -22,7 +22,7 @@ struct IrohTransportActor {
 impl IrohTransport {
     pub fn new(handle: u64) -> anyhow::Result<Self> {
         let (api, rx) = Handle::channel(1024);
-        crate::runtime_handle().spawn(async move {
+        crate::runtime_handle()?.spawn(async move {
             let mut actor = IrohTransportActor {
                 rx,
                 handle,
@@ -57,7 +57,7 @@ impl IrohTransport {
             .ok()
     }
 
-    pub async fn get_by_listener_handle(&self, handle: u64) -> Option<IrohNode> {
+    pub async fn get_node_by_listener_handle(&self, handle: u64) -> Option<IrohNode> {
         self.api
             .call(move |actor| {
                 Box::pin(async move {

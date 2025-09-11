@@ -47,7 +47,7 @@ impl IrohNode {
             .spawn();
         actor.set_router(router).await;
 
-        crate::runtime_handle().spawn(async move {
+        crate::runtime_handle()?.spawn(async move {
             debug!("[rust] IrohNodeActor started");
             if let Err(e) = actor.run().await {
                 warn!("[rust] IrohNodeActor exited with error: {:?}", e);
@@ -212,26 +212,12 @@ impl ProtocolHandler for IrohNode {
         let node_id = connection.remote_node_id()?;
         info!("[rust] accepting connection from node id: {node_id}");
 
-        let stream_handle = self
-            .api
+        self.api
             .call(move |actor| Box::pin(async move { actor.handle_incoming(connection).await }))
             .await
             .map_err(|_| iroh::protocol::AcceptError::NotAllowed {})?;
 
-        let stream = self
-            .get_stream_by_handle(stream_handle)
-            .await
-            .ok_or(iroh::protocol::AcceptError::NotAllowed {})?;
-
-        while stream.get_status().await.map_err(|e| {
-            warn!("failed to get stream status: {}", e);
-            iroh::protocol::AcceptError::NotAllowed {}
-        })? != crate::stream::ActorStatus::Stopped
-        {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        }
-
-        debug!("[rust] connection accepted closed");
+        debug!("[rust] connection accepted");
 
         Ok(())
     }

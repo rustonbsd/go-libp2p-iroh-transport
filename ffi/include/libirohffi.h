@@ -31,7 +31,8 @@ typedef struct IrohStreamHandle {
 
 int32_t iroh_transport_new(struct IrohTransportHandle *out_handle);
 
-int32_t iroh_node_new(const uint8_t *ed25519_priv_ptr,
+int32_t iroh_node_new(struct IrohTransportHandle transport,
+                      const uint8_t *ed25519_priv_ptr,
                       size_t ed25519_priv_len,
                       const char *peer_id_raw,
                       struct IrohNodeHandle *out_handle);
@@ -48,18 +49,20 @@ int32_t iroh_dial(struct IrohNodeHandle node,
                   const char *_remote_maddr,
                   struct IrohStreamHandle *out_stream);
 
-int32_t iroh_stream_read(struct IrohStreamHandle s,
+int32_t iroh_stream_read(struct IrohStreamHandle stream,
                          uint8_t *buf,
                          size_t len,
                          uint64_t timeout,
                          ptrdiff_t *out_n);
 
-int32_t iroh_stream_write(struct IrohStreamHandle s,
+int32_t iroh_stream_write(struct IrohStreamHandle stream,
                           const uint8_t *buf,
                           size_t len,
                           uint64_t timeout,
                           ptrdiff_t *out_n);
 
-int32_t iroh_stream_close(struct IrohStreamHandle s);
+int32_t iroh_stream_close(struct IrohStreamHandle stream);
+
+int32_t iroh_shutdown(void);
 
 #endif  /* IROHFFI_H */

@@ -62,7 +62,7 @@ impl IrohStream {
         };
 
         // Spawn the stream actor – no handshake / blocking wait.
-        crate::runtime_handle().spawn(async move {
+        crate::runtime_handle()?.spawn(async move {
             let mut actor =
                 match IrohStreamActor::new(rx, handle, conn).await {
                     Ok(a) => a,
@@ -158,7 +158,14 @@ impl Actor for IrohStreamActor {
     async fn run(&mut self) -> anyhow::Result<()> {
         while self.actor_status == ActorStatus::Running {
             tokio::select! {
-                Some(action) = self.rx.recv() => action(self).await,
+                Some(action) = self.rx.recv() => {
+                    let res = action(self).await;
+                    if self.actor_status == ActorStatus::Stopped {
+                        break;
+                    }
+                    res
+                    
+                },
                 _ = tokio::signal::ctrl_c() => break,
             }
         }

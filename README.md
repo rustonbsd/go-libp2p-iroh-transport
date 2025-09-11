@@ -7,9 +7,18 @@ A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rus
 - ALPN: /libp2p/iroh/0.1.0
 - One global iroh runtime per process
 
-## Thoughts
-- Switch back to dyn lib again, extract .so at runtime? smaller binary but depends on your goals
+# Research
 
+- rust compile to wasm no static or dyn lib:
+  - https://blog.arcjet.com/calling-rust-ffi-libraries-from-go/
+  - https://blog.arcjet.com/webassembly-on-the-server-compiling-rust-to-wasm-and-executing-it-from-go/
+
+- dynamic embed in go from this guide used:
+  - https://github.com/mediremi/rust-plus-golang/tree/master
+
+## Thoughts
+- This seems to be best practice in go ffi -> Switch back to dyn lib again, extract .so at runtime? smaller binary but depends on your goals
+- Centeralize all ffi bindings in cgo_wrapper.go and only import wrapped handles in conn and transport (fine for this prototype for now)
 
 ## Status
 

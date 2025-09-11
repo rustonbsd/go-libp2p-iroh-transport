@@ -1,28 +1,42 @@
-.PHONY: all build-rust build-go
+# Start with Linux targets only
+RUST_TARGETS := \
+	x86_64-unknown-linux-gnu \
+	aarch64-unknown-linux-gnu
 
-.DEFAULT_GOAL := build
+LIBS_DIR := ffi/libs
+INCLUDE_DIR := ffi/include
 
-CARGO := cargo
-CBINDGEN := cbindgen
-CBINDGEN_CFG := cbindgen.toml
-CRATE := irohffi
-OUT_H := libirohffi.h
-DEST_INCLUDE := ../ffi/include
-DEST_LIB := ../ffi/lib/linux_amd64
-TARGET_LIB := target/release/libirohffi.a
-GO_BUILD_FLAGS=""
-RUST_BUILD_FLAGS ?= -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--icf=all
-all: build-rust build-go
+all: install-cross-tools install-targets build-rust-linux
 
-.PHONY: build-rust
-build-rust:
+.PHONY: install-targets
+install-targets:
+	@echo "Installing Rust targets..."
+	@for target in $(RUST_TARGETS); do \
+		rustup target add $$target; \
+	done
+
+.PHONY: install-cross-tools
+install-cross-tools:
+	@echo "Installing cross-compilation tools..."
+	sudo apt-get update
+	sudo apt-get install -y gcc-aarch64-linux-gnu
+
+.PHONY: build-rust-linux
+build-rust-linux: 
+	@mkdir -p $(LIBS_DIR)
 	@cd rust && \
-	RUST_BUILD_FLAGS="$(RUST_BUILD_FLAGS)" $(CARGO) build --release && \
-	$(CBINDGEN) --config $(CBINDGEN_CFG) --crate $(CRATE) --output $(OUT_H) && \
-	mkdir -p $(DEST_INCLUDE) && \
-	cp $(OUT_H) $(DEST_INCLUDE)/$(OUT_H) && \
-	mkdir -p $(DEST_LIB) && \
-	cp $(TARGET_LIB) $(DEST_LIB)/libirohffi.a
+	export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc && \
+	export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc && \
+	for target in $(RUST_TARGETS); do \
+		echo "Building for $$target..."; \
+		cargo build --release --target $$target; \
+		cp target/$$target/release/libirohffi.so ../$(LIBS_DIR)/libiroh_$$(echo $$target | tr '-' '_').so; \
+	done && \
+	mkdir -p ../$(INCLUDE_DIR) && \
+	cp target/include/libirohffi.h ../$(INCLUDE_DIR)/libirohffi.h
 
-build-go: build-rust
-	@go build $(GO_BUILD_FLAGS)
+.PHONY: test
+test:
+	@go test .
+	@cd rust && \
+	cargo test

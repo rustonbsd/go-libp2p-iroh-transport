@@ -61,7 +61,6 @@ var _ transport.DialUpdater = &IrohTransport{}
 // NewIrohTransport creates a iroh transport object that tracks dialers and listeners
 // created.
 func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager, h host.Host, p peer.ID, opts ...Option) (*IrohTransport, error) {
-
 	if rcmgr == nil {
 		rcmgr = &network.NullResourceManager{}
 	}
@@ -81,7 +80,7 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 		return nil, fmt.Errorf("failed to get raw private key: %w", err)
 	}
 
-	node, err := ffi.NewNode(privKeyBytes, p)
+	node, err := ffi.NewNode(transportHandle, privKeyBytes, p)
 	if err != nil {
 		return nil, err
 	}
@@ -115,10 +114,11 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 // it could dial TCP, UDP, nothing else tested yet.
 // [!] todo: test all defradb available transports and see if it works univerally on all platforms (so far only tested on linux/amd64)
 func (t *IrohTransport) CanDial(addr ma.Multiaddr) bool {
-	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_P2P)).Matches(addr)
+	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)).Matches(addr)
 }
 
 func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.ID) (manet.Conn, error) {
+
 	if t.connectTimeout > 0 {
 		var cancel context.CancelFunc
 		_, cancel = context.WithTimeout(ctx, t.connectTimeout)
@@ -211,7 +211,7 @@ func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
 		return nil, err
 	}
 
-	listen := irohListener{h: h, lma: laddr}
+	listen := IrohListener{h: h, lma: laddr}
 
 	// Upgrade the manet listener (connection gating handled by libp2p stack if configured).
 	maListener := manet.Listener(listen)
@@ -232,6 +232,11 @@ func (t *IrohTransport) Proxy() bool {
 
 func (t *IrohTransport) String() string {
 	return "IROH"
+}
+
+func Shutdown() error {
+	ffi.Shutdown()
+	return nil
 }
 
 func WithIrohNode(h ffi.NodeHandle) Option {
