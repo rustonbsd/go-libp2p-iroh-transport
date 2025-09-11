@@ -26,14 +26,11 @@ type StreamHandle = C.IrohStreamHandle
 
 func NewTransport() (TransportHandle, error) {
 	Init()
-	fmt.Printf("DEBUG: About to call iroh_transport_new\n")
 	var out TransportHandle
 	rc := C.iroh_transport_new(&out)
-	fmt.Printf("DEBUG: iroh_transport_new returned rc=%d, handle=%v\n", int(rc), out)
 	if rc != 0 {
 		return out, fmt.Errorf("iroh_transport_new rc=%d", int(rc))
 	}
-	fmt.Printf("DEBUG: iroh_transport_new returned handle=%v\n", out)
 	return out, nil
 }
 
@@ -49,7 +46,6 @@ func NewNode(transportHandle TransportHandle, ed25519Priv []byte, p peer.ID) (No
 	if rc != 0 {
 		return out, fmt.Errorf("iroh_node_new rc=%d", int(rc))
 	}
-	fmt.Printf("DEBUG: iroh_node_new returned rc=%d, handle=%v\n", int(rc), out)
 	return out, nil
 }
 
@@ -61,7 +57,6 @@ func Listen(node NodeHandle, maddr string) (ListenerHandle, error) {
 	if rc != 0 {
 		return h, fmt.Errorf("iroh_listen rc=%d", int(rc))
 	}
-	fmt.Printf("DEBUG: iroh_listen returned rc=%d, handle=%v\n", int(rc), h)
 	return h, nil
 }
 
@@ -71,7 +66,6 @@ func Accept(l ListenerHandle, timeout time.Duration) (StreamHandle, error) {
 	if rc != 0 {
 		return s, fmt.Errorf("iroh_accept rc=%d", int(rc))
 	}
-	fmt.Printf("DEBUG: iroh_accept returned rc=%d, handle=%v\n", int(rc), s)
 	return s, nil
 }
 
@@ -83,7 +77,6 @@ func Dial(node NodeHandle, p peer.ID) (StreamHandle, error) {
 	if rc != 0 {
 		return s, fmt.Errorf("iroh_dial rc=%d", int(rc))
 	}
-	fmt.Printf("DEBUG: iroh_dial returned rc=%d, handle=%v\n", int(rc), s)
 	return s, nil
 }
 

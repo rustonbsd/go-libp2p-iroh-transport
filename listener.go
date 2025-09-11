@@ -5,9 +5,10 @@ import (
 	"net"
 	"time"
 
+	libirohffi "go-libp2p-iroh-transport/ffi"
+
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	libirohffi "github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 )
 
 type IrohListener struct {
