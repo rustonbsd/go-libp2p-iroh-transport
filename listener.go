@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	libirohffi "go-libp2p-iroh-transport/ffi"
+	libirohffi "iroh-transport/ffi"
 
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
