@@ -20,11 +20,12 @@ impl State {
         self.transports.lock().await.get(&handle).cloned()
     }
 
-    pub async fn add_transport(&self, transport: IrohTransport) {
+    pub async fn add_transport(&self, transport: IrohTransport) -> anyhow::Result<()> {
         self.transports
             .lock()
             .await
-            .insert(transport.get_handle().await, transport);
+            .insert(transport.get_handle().await.ok_or(anyhow::anyhow!("no transport handle"))?, transport);
+        Ok(())
     }
 
     pub async fn get_transport_by_node_handle(&self, handle: u64) -> Option<IrohTransport> {

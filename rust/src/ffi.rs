@@ -26,7 +26,11 @@ pub extern "C" fn iroh_transport_new(out_handle: *mut IrohTransportHandle) -> i3
                     "[rust] Transport created with handle: {:?}",
                     transport.get_handle().await
                 );
-                crate::STATE.add_transport(transport).await;
+                if crate::STATE.add_transport(transport).await.is_err() {
+                    error!("[rust] failed to add transport to state");
+                    let _ = tx.send(None);
+                    return;
+                }
                 let _ = tx.send(Some(()));
             } else {
                 error!("[rust] failed to create transport tokio runtime");
