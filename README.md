@@ -6,19 +6,19 @@ A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rus
 - [x] Make working go package with ffi bindings
 - [x] create two libp2p nodes with iroh transport only and have them connect successfully
 - [x] Centeralize all ffi bindings in cgo_wrapper.go and only import wrapped handles in conn and transport (fine for this prototype for now)
-- [] fix listener closed bug (implement propper listener close)
-- [] add docker local isolated network integration test (in defradb) (proof new capability vs vanilla defradb in cold bootstrapping)
-- [] add cicd pipeline
-- [] benchmark
-- [] 3rd party code review
-- [] professionalize go package (README, docs, examples, etc.)
-- [] publish to go module proxy
+- [ ] fix listener closed bug (implement propper listener close)
+- [ ] add docker local isolated network integration test (in defradb) (proof new capability vs vanilla defradb in cold bootstrapping)
+- [ ] add cicd pipeline
+- [ ] benchmark
+- [ ] 3rd party code review
+- [ ] professionalize go package (README, docs, examples, etc.)
+- [ ] publish to go module proxy
 
 ## Next up run TODO's
-- [] add more targets and platforms (aarch64, musl, windows, macos, etc.)
-- [] find a better way then to wrap the Rust<>C<(>Go<>C<)>Go handles in go again
-- [] refactor with [kameo](https://github.com/tqwewe/kameo/tree/main) (tiny actor framework) and benchmark
-- [] research more go ffi package best practices (see research secion)
+- [ ] add more targets and platforms (aarch64, musl, windows, macos, etc.)
+- [ ] find a better way then to wrap the Rust<>C<(>Go<>C<)>Go handles in go again
+- [ ] refactor with [kameo](https://github.com/tqwewe/kameo/tree/main) (tiny actor framework) and benchmark
+- [ ] research more go ffi package best practices (see research secion)
 
 ## Tests
 ```bash

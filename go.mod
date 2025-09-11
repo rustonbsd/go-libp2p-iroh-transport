@@ -1,4 +1,4 @@
-module go-libp2p-iroh-transport
+module iroh-transport
 
 go 1.24
 
