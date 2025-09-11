@@ -234,11 +234,6 @@ func (t *IrohTransport) String() string {
 	return "IROH"
 }
 
-func Shutdown() error {
-	ffi.Shutdown()
-	return nil
-}
-
 func WithIrohNode(h ffi.NodeHandle) Option {
 	return func(tr *IrohTransport) error {
 		tr.node = h

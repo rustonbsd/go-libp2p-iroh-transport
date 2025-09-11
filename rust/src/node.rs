@@ -66,11 +66,11 @@ impl IrohNode {
             .ok()?
     }
 
-    pub async fn get_handle(&self) -> u64 {
+    pub async fn get_handle(&self) -> Option<u64> {
         self.api
             .call(move |actor| Box::pin(async move { Ok(actor.get_handle().await) }))
             .await
-            .unwrap_or_default()
+            .ok()
     }
 
     pub async fn try_accept_next(&self) -> Option<u64> {

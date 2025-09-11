@@ -73,9 +73,13 @@ pub extern "C" fn iroh_node_new(
     let iroh_secret = iroh::SecretKey::from_bytes(priv_key_bytes);
     debug!("Iroh pub key z32 encoded: {}", iroh_secret.public());
 
-    let peer_id = unsafe { CStr::from_ptr(peer_id_raw) }
-        .to_str()
-        .unwrap_or_default();
+    let peer_id = if let Ok(peer_id) = unsafe { CStr::from_ptr(peer_id_raw) }.to_str() {
+        peer_id
+    } else {
+        warn!("[rust] failed to decode peer id");
+        return -1;
+    };
+
     if let Some(pub_key) = crate::peer_id_to_ed25519_public_key(peer_id) {
         if iroh_secret.public() != pub_key {
             warn!("[rust] provided ed25519 private key does not match peer id");
@@ -113,7 +117,7 @@ pub extern "C" fn iroh_node_new(
         return -1i32;
     };
 
-    if let Ok(Some(node_handle)) = rx.blocking_recv() {
+    if let Ok(Some(Some(node_handle))) = rx.blocking_recv() {
         debug!("[rust] IrohNode created with handle: {}", node_handle);
         unsafe {
             *out_handle = IrohNodeHandle(node_handle);
@@ -135,9 +139,13 @@ pub extern "C" fn iroh_listen(
         return -1;
     }
 
-    let listen_addr_str = unsafe { CStr::from_ptr(listen_maddr) }
-        .to_str()
-        .unwrap_or_default();
+    let listen_addr_str =
+        if let Ok(listen_addr_str) = unsafe { CStr::from_ptr(listen_maddr) }.to_str() {
+            listen_addr_str
+        } else {
+            warn!("[rust] failed to decode listen address");
+            return -1;
+        };
     debug!("[rust] listening on: {listen_addr_str}");
 
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -164,7 +172,7 @@ pub extern "C" fn iroh_listen(
         return -1i32;
     };
 
-    if let Ok(Some(node_handle)) = rx.blocking_recv() {
+    if let Ok(Some(Some(node_handle))) = rx.blocking_recv() {
         unsafe { *out_listener = IrohListenerHandle(node_handle) }
         0i32
     } else {
@@ -220,8 +228,8 @@ pub extern "C" fn iroh_accept(
         return -1i32;
     };
 
-    match rx.blocking_recv().unwrap_or_default() {
-        Some(Ok(stream_handle)) => {
+    match rx.blocking_recv() {
+        Ok(Some(Ok(stream_handle))) => {
             debug!("[rust] accepted stream with handle: {}", stream_handle);
             unsafe { *out_stream = IrohStreamHandle(stream_handle) }
             0
@@ -240,9 +248,13 @@ pub extern "C" fn iroh_dial(
         return -1i32;
     }
 
-    let remote_addr_str = unsafe { CStr::from_ptr(_remote_maddr) }
-        .to_str()
-        .unwrap_or_default();
+    let remote_addr_str =
+        if let Ok(remote_addr_str) = unsafe { CStr::from_ptr(_remote_maddr) }.to_str() {
+            remote_addr_str
+        } else {
+            warn!("[rust] failed to decode remote address");
+            return -1;
+        };
     debug!("[rust] dialing: {remote_addr_str}");
 
     let node_id = match crate::peer_id_to_ed25519_public_key(remote_addr_str) {
@@ -467,10 +479,11 @@ pub extern "C" fn iroh_stream_write(
             } else {
                 let _ = tx.send(None);
             }
-        })} else {
-            warn!("[rust] failed to get runtime handle");
-            return -1i32
-        };
+        })
+    } else {
+        warn!("[rust] failed to get runtime handle");
+        return -1i32;
+    };
 
     if let Some(size) = rx.blocking_recv().unwrap_or(None) {
         unsafe {
@@ -506,10 +519,11 @@ pub extern "C" fn iroh_stream_close(stream: IrohStreamHandle) -> i32 {
                 warn!("[rust] invalid stream handle");
                 let _ = tx.send(None);
             }
-        })} else {
-            warn!("[rust] failed to get runtime handle");
-            return -1i32
-        };
+        })
+    } else {
+        warn!("[rust] failed to get runtime handle");
+        return -1i32;
+    };
 
     if let Ok(Some(_)) = rx.blocking_recv() {
         0i32
