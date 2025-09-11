@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-libp2p-iroh-transport/ffi"
+	"iroh-transport/ffi"
 	"net"
 	"sync/atomic"
 	"time"
