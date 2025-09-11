@@ -10,12 +10,12 @@ import (
 	libirohffi "github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 )
 
-type irohListener struct {
+type IrohListener struct {
 	h   libirohffi.ListenerHandle
 	lma ma.Multiaddr
 }
 
-func (l irohListener) Accept() (manet.Conn, error) {
+func (l IrohListener) Accept() (manet.Conn, error) {
 	// Pick a sane timeout; or block forever if you prefer
 	h, err := libirohffi.Accept(l.h, 30*time.Second)
 	if err != nil {
@@ -43,15 +43,15 @@ func (l irohListener) Accept() (manet.Conn, error) {
 	return manet.WrapNetConn(nc)
 }
 
-func (l irohListener) Close() error {
+func (l IrohListener) Close() error {
 	return nil
 }
 
-func (l irohListener) Addr() net.Addr {
+func (l IrohListener) Addr() net.Addr {
 	na, _ := manet.ToNetAddr(l.lma)
 	return na
 }
 
-func (l irohListener) Multiaddr() ma.Multiaddr {
+func (l IrohListener) Multiaddr() ma.Multiaddr {
 	return l.lma
 }

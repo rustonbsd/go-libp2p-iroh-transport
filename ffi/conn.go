@@ -1,11 +1,13 @@
-package libirohffi
+//go:build cgo
 
-// #cgo CFLAGS: -I${SRCDIR}/include
-// #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/lib/linux_amd64 -lirohffi -ldl -lpthread
-// #cgo linux,arm64 LDFLAGS: -L${SRCDIR}/lib/linux_arm64 -lirohffi -ldl -lpthread
-// #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/lib/darwin_arm64 -lirohffi
-// #cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/lib/darwin_amd64 -lirohffi
-// #include "../include/libirohffi.h"
+package ffi
+
+/*
+#cgo CFLAGS: -I${SRCDIR}/include
+#cgo LDFLAGS: -ldl -lpthread -lm
+#include "libirohffi.h"
+#include <stdlib.h>
+*/
 import "C"
 import (
 	"fmt"
@@ -86,7 +88,7 @@ func (c *irohConn) readTimeoutMs() uint64 {
 	c.rdMu.Lock()
 	defer c.rdMu.Unlock()
 	if c.rd.IsZero() {
-		return 0
+		return 30000 // 30 second default timeout instead of 0
 	}
 	d := time.Until(c.rd)
 	if d <= 0 {
@@ -94,11 +96,12 @@ func (c *irohConn) readTimeoutMs() uint64 {
 	}
 	return uint64(d.Milliseconds())
 }
+
 func (c *irohConn) writeTimeoutMs() uint64 {
 	c.wdMu.Lock()
 	defer c.wdMu.Unlock()
 	if c.wd.IsZero() {
-		return 0
+		return 30000 // 30 second default timeout instead of 0
 	}
 	d := time.Until(c.wd)
 	if d <= 0 {

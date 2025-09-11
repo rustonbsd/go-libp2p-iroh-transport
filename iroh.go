@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/transport"
-	libirohffi "github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
+	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 
 	logging "github.com/ipfs/go-log/v2"
 	ma "github.com/multiformats/go-multiaddr"
@@ -49,8 +49,8 @@ type IrohTransport struct {
 
 	rcmgr network.ResourceManager
 
-	handle libirohffi.TransportHandle
-	node   libirohffi.NodeHandle
+	handle ffi.TransportHandle
+	node   ffi.NodeHandle
 
 	localAddr *net.TCPAddr
 }
@@ -61,12 +61,10 @@ var _ transport.DialUpdater = &IrohTransport{}
 // NewIrohTransport creates a iroh transport object that tracks dialers and listeners
 // created.
 func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager, h host.Host, p peer.ID, opts ...Option) (*IrohTransport, error) {
-
-	fmt.Println("[IROH-TRANSPORT] NewIrohTransport")
 	if rcmgr == nil {
 		rcmgr = &network.NullResourceManager{}
 	}
-	transportHandle, err := libirohffi.NewTransport()
+	transportHandle, err := ffi.NewTransport()
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +80,7 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 		return nil, fmt.Errorf("failed to get raw private key: %w", err)
 	}
 
-	node, err := libirohffi.NewNode(privKeyBytes, p)
+	node, err := ffi.NewNode(transportHandle, privKeyBytes, p)
 	if err != nil {
 		return nil, err
 	}
@@ -116,18 +114,18 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 // it could dial TCP, UDP, nothing else tested yet.
 // [!] todo: test all defradb available transports and see if it works univerally on all platforms (so far only tested on linux/amd64)
 func (t *IrohTransport) CanDial(addr ma.Multiaddr) bool {
-	return mafmt.Or(mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)), mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_UDP))).Matches(addr) ||
-		mafmt.Or(mafmt.And(mafmt.Base(ma.P_IP6), mafmt.Base(ma.P_TCP)), mafmt.And(mafmt.Base(ma.P_IP6), mafmt.Base(ma.P_UDP))).Matches(addr)
+	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)).Matches(addr)
 }
 
 func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.ID) (manet.Conn, error) {
+
 	if t.connectTimeout > 0 {
 		var cancel context.CancelFunc
 		_, cancel = context.WithTimeout(ctx, t.connectTimeout)
 		defer cancel()
 	}
 
-	h, err := libirohffi.Dial(t.node, p)
+	h, err := ffi.Dial(t.node, p)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +147,7 @@ func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.I
 	// IP zero + port 0 is acceptable; upgrader will embed it into a /ip4/0.0.0.0/tcp/0 multiaddr.
 	la := t.localAddr
 
-	nc := libirohffi.WrapStream(h, la, rna)
+	nc := ffi.WrapStream(h, la, rna)
 	return manet.WrapNetConn(nc)
 }
 
@@ -208,12 +206,12 @@ func (t *IrohTransport) UseReuseport() bool {
 }
 
 func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
-	h, err := libirohffi.Listen(t.node, laddr.String())
+	h, err := ffi.Listen(t.node, laddr.String())
 	if err != nil {
 		return nil, err
 	}
 
-	listen := irohListener{h: h, lma: laddr}
+	listen := IrohListener{h: h, lma: laddr}
 
 	// Upgrade the manet listener (connection gating handled by libp2p stack if configured).
 	maListener := manet.Listener(listen)
@@ -223,7 +221,7 @@ func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
 // Protocols returns the list of terminal protocols this transport can dial.
 // [!] todo: adjust protocols [blocked]: refactor with mutiaddress for iroh
 func (t *IrohTransport) Protocols() []int {
-	return []int{ma.P_P2P, ma.P_TCP, ma.P_UDP}
+	return []int{ma.P_TCP}
 }
 
 // [!] todo: is this comment still right for iroh? it is a proxy sooo?:
@@ -236,9 +234,8 @@ func (t *IrohTransport) String() string {
 	return "IROH"
 }
 
-func WithIrohNode(h libirohffi.NodeHandle) Option {
+func WithIrohNode(h ffi.NodeHandle) Option {
 	return func(tr *IrohTransport) error {
-		fmt.Println("[IROH-TRANSPORT] WithIrohNode", h)
 		tr.node = h
 		return nil
 	}

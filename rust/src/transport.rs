@@ -22,7 +22,7 @@ struct IrohTransportActor {
 impl IrohTransport {
     pub fn new(handle: u64) -> anyhow::Result<Self> {
         let (api, rx) = Handle::channel(1024);
-        crate::runtime_handle().spawn(async move {
+        crate::runtime_handle()?.spawn(async move {
             let mut actor = IrohTransportActor {
                 rx,
                 handle,
@@ -35,11 +35,11 @@ impl IrohTransport {
         Ok(Self { api })
     }
 
-    pub async fn get_handle(&self) -> u64 {
+    pub async fn get_handle(&self) -> Option<u64> {
         self.api
             .call(move |actor| Box::pin(actor.get_handle()))
             .await
-            .unwrap_or_default()
+            .ok()
     }
 
     pub async fn get_node_by_handle(&self, handle: u64) -> Option<IrohNode> {
@@ -57,7 +57,7 @@ impl IrohTransport {
             .ok()
     }
 
-    pub async fn get_by_listener_handle(&self, handle: u64) -> Option<IrohNode> {
+    pub async fn get_node_by_listener_handle(&self, handle: u64) -> Option<IrohNode> {
         self.api
             .call(move |actor| {
                 Box::pin(async move {
@@ -86,7 +86,6 @@ impl IrohTransport {
             .ok()
     }
 
-    // Returns the first node that holds the stream handle, if any
     pub async fn get_node_by_stream_handle(&self, handle: u64) -> Option<IrohNode> {
         self.api
             .call(move |actor| {
@@ -159,7 +158,10 @@ impl IrohTransportActor {
     }
 
     pub async fn add_node(&mut self, node: IrohNode) -> anyhow::Result<()> {
-        let handle = node.get_handle().await;
+        let handle = node
+            .get_handle()
+            .await
+            .ok_or_else(|| anyhow::anyhow!("no node handle"))?;
         self.nodes.insert(handle, node);
         Ok(())
     }

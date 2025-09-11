@@ -1,43 +1,58 @@
 # go-libp2p-iroh-transport
 
-A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rust FFI. Built for plugging iroh into libp2p and DefraDB with a clean Go API.
+A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rust FFI. Built for plugging iroh into libp2p and DefraDB.
 
-- Backed by iroh 0.91 (QUIC + discovery)
-- Ed25519-only identity (validated against the PeerID)
-- ALPN: /libp2p/iroh/0.1.0
-- One global iroh runtime per process
+## Befor any adoption TODOs
+- [x] Make working go package with ffi bindings
+- [x] create two libp2p nodes with iroh transport only and have them connect successfully
+- [x] Centeralize all ffi bindings in cgo_wrapper.go and only import wrapped handles in conn and transport (fine for this prototype for now)
+- [] add docker local isolated network integration test (in defradb) (proof new capability vs vanilla defradb in cold bootstrapping)
+- [] add cicd pipeline
+- [] benchmark
+- [] 3rd party code review
+- [] professionalize go package (README, docs, examples, etc.)
+- [] publish to go module proxy
 
-## Status
+## Next up run TODO's
+- [] add more targets and platforms (aarch64, musl, windows, macos, etc.)
+- [] find a better way then to wrap the Rust<>C<(>Go<>C<)>Go handles in go again
+- [] refactor with [kameo](https://github.com/tqwewe/kameo/tree/main) (tiny actor framework) and benchmark
+- [] research more go ffi package best practices (see research secion)
 
-- Dial, listen, accept, read, write, close: working
-- Target: Linux/amd64 (add more by building extra staticlibs)
-- Peer-ID–driven dialing; multiaddr is for bookkeeping
-
+## Tests
+```bash
+> go test .
+ok      github.com/rustonbsd/go-libp2p-iroh-transport   2.166s
+```
 ## Install
 
 ```bash
-go get github.com/rustonbsd/go-libp2p-iroh-transport
+go get github.com/rustonbsd/go-libp2p-iroh-transport@v0.0.2
 ```
 
-Build the Rust staticlib and header once (required for cgo):
+## Build
 
+Build the rust .so and header (required for cgo):
 ```bash
-cargo install cbindgen
-make build-rust
+make build-rust-linux
 ```
 
-Full build (Rust + Go):
-
-```bash
-make
-```
+(note: only linux supported at this moment)
 
 Artifacts:
-- include/libirohffi.h
-- lib/linux_amd64/libirohffi.a
+- ffi/include/libirohffi.h
+- ffi/lib/linux_amd64/libiroh_aarch64_unknown_linux_gnu.so
+- ffi/lib/linux_arm64/libiroh_x86_64_unknown_linux_gnu.so
 
-## Notes
 
-- Ed25519 only; we verify the private key matches the PeerID
-- One iroh runtime/transport per process (current design)
-- Expand target platforms by adding staticlibs for those triples
+
+## Research
+
+- rust compile to wasm no static or dyn lib:
+  - https://blog.arcjet.com/calling-rust-ffi-libraries-from-go/
+  - https://blog.arcjet.com/webassembly-on-the-server-compiling-rust-to-wasm-and-executing-it-from-go/
+
+- dynamic embed in go from this guide used:
+  - https://github.com/mediremi/rust-plus-golang/tree/master
+
+- look into [cargo-zigbuild](https://github.com/rust-cross/cargo-zigbuild) for cross-compilation (maybe help rust land in the default compile chain of defradb :) )
