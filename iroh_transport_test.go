@@ -3,7 +3,8 @@ package iroh
 import (
 	"context"
 	"fmt"
-	"irohtransport/ffi"
+
+	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 
 	"testing"
 	"time"
