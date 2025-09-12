@@ -1,4 +1,4 @@
-module iroh-transport
+module irohtransport
 
 go 1.24
 
