@@ -3,7 +3,6 @@ package iroh
 import (
 	"context"
 	"fmt"
-	"irohtransport/ffi"
 
 	"testing"
 	"time"
@@ -15,10 +14,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	transport2 "github.com/libp2p/go-libp2p/core/transport"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 )
 
 // buildTestHost creates a libp2p host that ONLY uses the iroh transport.
-func buildTestHost(t *testing.T, listen ma.Multiaddr) corehost.Host {
+func buildTestHost(t *testing.T) corehost.Host {
 	t.Helper()
 
 	// Custom transport constructor passed into libp2p stack.
@@ -31,12 +31,16 @@ func buildTestHost(t *testing.T, listen ma.Multiaddr) corehost.Host {
 	if err != nil {
 		t.Fatalf("ed25519 key gen failed: %v", err)
 	}
-	_ = pk // silence unused (host creation validates internally)
+	addr, err := pubKeyToMultiAddr(pk)
+	if err != nil {
+		t.Fatalf("failed to create multiaddr: %v", err)
+	}
 
 	// Disable all default transports so only ours is active.
 	opts := []libp2p.Option{
+		libp2p.DefaultTransports,
 		libp2p.Transport(ctor),
-		libp2p.ListenAddrs(listen),
+		libp2p.ListenAddrs(addr),
 		libp2p.Identity(sk),
 	}
 
@@ -50,20 +54,9 @@ func buildTestHost(t *testing.T, listen ma.Multiaddr) corehost.Host {
 // TestIrohTransportPeerConnection spins up two libp2p hosts using only the
 // iroh transport and ensures they can connect & then closes them.
 func TestIrohTransportPeerConnection(t *testing.T) {
-	pA := nextSyntheticPort()
-	pB := nextSyntheticPort()
-	listenA, _ := ma.NewMultiaddr(
-		fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", pA),
-	)
-	listenB, _ := ma.NewMultiaddr(
-		fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", pB),
-	)
 
-	hA := buildTestHost(t, listenA)
-	hB := buildTestHost(t, listenB)
-
-	defer hA.Close()
-	defer hB.Close()
+	hA := buildTestHost(t)
+	hB := buildTestHost(t)
 
 	time.Sleep(2 * time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -93,22 +86,38 @@ func TestIrohTransportPeerConnection(t *testing.T) {
 		t.Fatalf("expected connection entries on both peers")
 	}
 
+	hA.Close()
+	hB.Close()
+
 	fmt.Printf("Test passed - connections established!\n")
 
 	ffi.Shutdown()
+	time.Sleep(2 * time.Second)
 }
 
 // TestCanDialBasic ensures CanDial accepts TCP/UDP IP multiaddrs and rejects others.
 func TestCanDialBasic(t *testing.T) {
 	tr := &IrohTransport{}
+	// Generate a valid iroh multiaddr from a real ed25519 key.
+	sk, pk, err := crypto.GenerateEd25519Key(nil)
+	if err != nil {
+		t.Fatalf("key gen failed: %v", err)
+	}
+	_ = sk // silence unused (not needed)
+	addr, err := pubKeyToMultiAddr(pk)
+	if err != nil {
+		t.Fatalf("failed to build iroh multiaddr: %v", err)
+	}
+
 	goodAddrs := []string{
-		"/ip4/127.0.0.1/tcp/1234",
+		addr.String(),
 	}
 	badAddrs := []string{
-		"/ip4/127.0.0.1/udp/5678", // udp currently not supported by CanDial
+		"/ip4/127.0.0.1/tcp/1234", // udp currently not supported by CanDial
 		"/ip6/::1/tcp/9999",       // ipv6 not yet whitelisted
 		"/dns4/example.com/tcp/80",
 		"/unix/tmp/socket",
+		"/ip4/127.0.0.1/udp/1234/iroh/52053b9fad4c51f1d6483f7df82182353c1084e10b341e05bf4ee27ecdb876d4", // udp currently not supported by CanDial
 	}
 	for _, s := range goodAddrs {
 		m, _ := ma.NewMultiaddr(s)
