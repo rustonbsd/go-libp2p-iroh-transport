@@ -3,7 +3,8 @@ package iroh
 import (
 	"context"
 	"fmt"
-	"iroh-transport/ffi"
+	"irohtransport/ffi"
+
 	"testing"
 	"time"
 
