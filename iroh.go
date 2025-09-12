@@ -5,24 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
-
-	"irohtransport/ffi"
 
 	"github.com/libp2p/go-libp2p/core/crypto/pb"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/transport"
+	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 
 	logging "github.com/ipfs/go-log/v2"
 	ma "github.com/multiformats/go-multiaddr"
-	mafmt "github.com/multiformats/go-multiaddr-fmt"
 	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 var _log = logging.Logger("iroh-transport")
+
+var initMa sync.Once
 
 type Option func(*IrohTransport) error
 
@@ -62,6 +63,9 @@ var _ transport.DialUpdater = &IrohTransport{}
 // NewIrohTransport creates a iroh transport object that tracks dialers and listeners
 // created.
 func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager, h host.Host, p peer.ID, opts ...Option) (*IrohTransport, error) {
+	initMa.Do(func() {
+		ma.AddProtocol(IrohProtocol)
+	})
 	if rcmgr == nil {
 		rcmgr = &network.NullResourceManager{}
 	}
@@ -110,12 +114,9 @@ func NewIrohTransport(upgrader transport.Upgrader, rcmgr network.ResourceManager
 
 // CanDial returns true if this transport believes it can dial the given
 // multiaddr.
-// IrohTransport is only based on the peerId so in theory
-// (or at least my very limeted tests so far)
-// it could dial TCP, UDP, nothing else tested yet.
-// [!] todo: test all defradb available transports and see if it works univerally on all platforms (so far only tested on linux/amd64)
 func (t *IrohTransport) CanDial(addr ma.Multiaddr) bool {
-	return mafmt.And(mafmt.Base(ma.P_IP4), mafmt.Base(ma.P_TCP)).Matches(addr)
+	_, err := addr.ValueForProtocol(IrohProtocol.Code)
+	return err == nil
 }
 
 func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.ID) (manet.Conn, error) {
@@ -132,9 +133,9 @@ func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.I
 	}
 
 	// Remote net.Addr derived from multiaddr (must be *net.TCPAddr for /tcp)
-	rna, err := manet.ToNetAddr(raddr)
-	if err != nil {
-		return nil, fmt.Errorf("convert remote addr: %w", err)
+	remotTCP := &net.TCPAddr{
+		IP:   net.IPv4zero,
+		Port: nextSyntheticPort(),
 	}
 	/*
 		rtcp, ok := rna.(*net.TCPAddr)
@@ -148,7 +149,7 @@ func (t *IrohTransport) maDial(ctx context.Context, raddr ma.Multiaddr, p peer.I
 	// IP zero + port 0 is acceptable; upgrader will embed it into a /ip4/0.0.0.0/tcp/0 multiaddr.
 	la := t.localAddr
 
-	nc := ffi.WrapStream(h, la, rna)
+	nc := ffi.WrapStream(h, la, remotTCP)
 	return manet.WrapNetConn(nc)
 }
 
@@ -222,7 +223,7 @@ func (t *IrohTransport) Listen(laddr ma.Multiaddr) (transport.Listener, error) {
 // Protocols returns the list of terminal protocols this transport can dial.
 // [!] todo: adjust protocols [blocked]: refactor with mutiaddress for iroh
 func (t *IrohTransport) Protocols() []int {
-	return []int{ma.P_TCP}
+	return []int{IrohProtocol.Code}
 }
 
 // [!] todo: is this comment still right for iroh? it is a proxy sooo?:
