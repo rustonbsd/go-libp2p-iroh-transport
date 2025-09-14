@@ -8,7 +8,6 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -32,15 +31,15 @@ var IrohProtocol = ma.Protocol{
 	Transcoder: ma.NewTranscoderFromFunctions(strToBytes, bytesToStr, validate),
 }
 
-func pubKeyToMultiAddr(pk crypto.PubKey) (ma.Multiaddr, error) {
+func PubKeyToMultiAddr(pk crypto.PubKey) (ma.Multiaddr, error) {
 	pkBytes, err := pk.Raw()
 	if err != nil {
 		return nil, err
 	}
-	return pubKeyBytesToMultiAddr(pkBytes)
+	return PubKeyBytesToMultiAddr(pkBytes)
 }
 
-func pubKeyBytesToMultiAddr(pkBytes []byte) (ma.Multiaddr, error) {
+func PubKeyBytesToMultiAddr(pkBytes []byte) (ma.Multiaddr, error) {
 	enc := base32.StdEncoding.EncodeToString(pkBytes)
 	enc = strings.ToLower(strings.TrimRight(enc, "="))
 	return ma.NewMultiaddr("/iroh/" + enc)
@@ -70,34 +69,40 @@ func bytesToStr(b []byte) (string, error) {
 }
 
 func WithIrohAddr(cfg *libp2p.Config) error {
+
+	if cfg.PeerKey == nil {
+		return nil
+	}
+
+	pubKey := cfg.PeerKey.GetPublic()
+	irohBase, err := PubKeyToMultiAddr(pubKey)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for _, a := range cfg.ListenAddrs {
+		if a.Equal(irohBase) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		cfg.ListenAddrs = append(cfg.ListenAddrs, irohBase)
+	}
+
 	prev := cfg.AddrsFactory
 	cfg.AddrsFactory = func(addrs []ma.Multiaddr) []ma.Multiaddr {
 		if prev != nil {
 			addrs = prev(addrs)
 		}
-		pubKey := cfg.PeerKey.GetPublic()
-		irohBase, err := pubKeyToMultiAddr(pubKey)
-		if err != nil {
-			return addrs
-		}
-		peerId, err := peer.IDFromPrivateKey(cfg.PeerKey)
-		if err != nil {
-			return addrs
-		}
-		irohAddr := irohBase.Encapsulate(ma.StringCast("/p2p/" + peerId.String()))
-
 		// Deduplicate
-		found := false
 		for _, a := range addrs {
-			if a.Equal(irohAddr) {
-				found = true
-				break
+			if a.Equal(irohBase) {
+				return addrs
 			}
 		}
-		if !found {
-			addrs = append(addrs, irohAddr)
-		}
-		return addrs
+		return append(addrs, irohBase)
 	}
 	return nil
 }
