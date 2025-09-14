@@ -6,8 +6,9 @@ A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rus
 - [x] Make working go package with ffi bindings
 - [x] create two libp2p nodes with iroh transport only and have them connect successfully
 - [x] Centeralize all ffi bindings in cgo_wrapper.go and only import wrapped handles in conn and transport (fine for this prototype for now)
+- [x] add iroh multi address support (dial and listen)
 - [ ] fix listener closed bug (implement propper listener close)
-- [ ] add docker local isolated network integration test (in defradb) (proof new capability vs vanilla defradb in cold bootstrapping)
+- [x] add docker local isolated network integration test (in defradb) (proof new capability vs vanilla defradb in cold bootstrapping)
 - [ ] add cicd pipeline
 - [ ] benchmark
 - [ ] 3rd party code review
