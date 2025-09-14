@@ -31,17 +31,18 @@ func buildTestHost(t *testing.T) corehost.Host {
 	if err != nil {
 		t.Fatalf("ed25519 key gen failed: %v", err)
 	}
-	addr, err := pubKeyToMultiAddr(pk)
+	addr, err := PubKeyToMultiAddr(pk)
 	if err != nil {
 		t.Fatalf("failed to create multiaddr: %v", err)
 	}
 
 	// Disable all default transports so only ours is active.
 	opts := []libp2p.Option{
-		libp2p.DefaultTransports,
+		//libp2p.DefaultTransports,
 		libp2p.Transport(ctor),
 		libp2p.ListenAddrs(addr),
 		libp2p.Identity(sk),
+		WithIrohAddr,
 	}
 
 	h, err := libp2p.New(opts...)
@@ -104,7 +105,7 @@ func TestCanDialBasic(t *testing.T) {
 		t.Fatalf("key gen failed: %v", err)
 	}
 	_ = sk // silence unused (not needed)
-	addr, err := pubKeyToMultiAddr(pk)
+	addr, err := PubKeyToMultiAddr(pk)
 	if err != nil {
 		t.Fatalf("failed to build iroh multiaddr: %v", err)
 	}
