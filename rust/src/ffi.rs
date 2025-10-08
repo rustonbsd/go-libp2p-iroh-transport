@@ -15,16 +15,18 @@ pub struct IrohTransportHandle(u64);
 #[unsafe(no_mangle)]
 pub extern "C" fn iroh_transport_new(out_handle: *mut IrohTransportHandle) -> i32 {
     if out_handle.is_null() {
-        warn!("[rust] out_handle is null");
+        warn!("[rust-transport] out_handle is null");
         return -1;
     }
 
+    debug!("[rust-transport] creating transport");
     let transport_handle = crate::get_next_transport_handle();
 
     match run_on_runtime(Token::Transport(transport_handle), async move {
         let transport = crate::transport::IrohTransport::new(transport_handle)?;
         info!(
-            "[rust] Transport created with handle: {:?}",
+            "[rust-transport-{}] Transport created with handle: {:?}",
+            transport_handle,
             transport.get_handle().await
         );
         crate::STATE.add_transport(transport).await?;
@@ -37,7 +39,10 @@ pub extern "C" fn iroh_transport_new(out_handle: *mut IrohTransportHandle) -> i3
             0i32
         }
         Err(err) => {
-            error!("[rust] failed to spawn transport creation task: {}", err);
+            error!(
+                "[rust-transport-{}] failed to spawn transport creation task: {}",
+                transport_handle, err
+            );
             -1i32
         }
     }
@@ -51,6 +56,7 @@ pub extern "C" fn iroh_node_new(
     peer_id_raw: *const ::std::os::raw::c_char,
     out_handle: *mut IrohNodeHandle,
 ) -> i32 {
+    debug!("[rust-transport-{}] creating node", transport.0);
     if ed25519_priv_ptr.is_null() || out_handle.is_null() {
         return -1;
     }
@@ -58,11 +64,16 @@ pub extern "C" fn iroh_node_new(
         "iroh_node_new called from: private_key_bytes_len: {}",
         ed25519_priv_len
     );
+    let node_handle = crate::get_next_node_handle();
+
     let raw_private_key = unsafe { std::slice::from_raw_parts(ed25519_priv_ptr, ed25519_priv_len) };
     let priv_key_bytes: &[u8; 32] = if let Ok(b) = raw_private_key[..32].try_into() {
         b
     } else {
-        debug!("[rust] invalid ed25519 private key length");
+        debug!(
+            "[rust-node-{}] invalid ed25519 private key length",
+            node_handle
+        );
         return -1;
     };
     let iroh_secret = iroh::SecretKey::from_bytes(priv_key_bytes);
@@ -71,21 +82,26 @@ pub extern "C" fn iroh_node_new(
     let peer_id = if let Ok(peer_id) = unsafe { CStr::from_ptr(peer_id_raw) }.to_str() {
         peer_id
     } else {
-        warn!("[rust] failed to decode peer id");
+        warn!("[rust-node-{}] failed to decode peer id", node_handle);
         return -1;
     };
 
     if let Some(pub_key) = crate::peer_id_to_ed25519_public_key(peer_id) {
         if iroh_secret.public() != pub_key {
-            warn!("[rust] provided ed25519 private key does not match peer id");
+            warn!(
+                "[rust-node-{}] provided ed25519 private key does not match peer id",
+                node_handle
+            );
             return -1;
         }
     } else {
-        warn!("[rust] failed to decode peer id to valid ed25519 public key");
+        warn!(
+            "[rust-node-{}] failed to decode peer id to valid ed25519 public key",
+            node_handle
+        );
         return -1;
     }
 
-    let node_handle = crate::get_next_node_handle();
     match run_on_runtime(Token::Node(node_handle), async move {
         let transport = if let Some(transport) = crate::STATE
             .get_transport_by_transport_handle(transport.0)
@@ -95,8 +111,7 @@ pub extern "C" fn iroh_node_new(
         } else {
             return Err(anyhow::anyhow!("transport must be created before node"));
         };
-        if let Ok(node) =
-            crate::node::IrohNode::new(node_handle.clone(), iroh_secret.clone()).await
+        if let Ok(node) = crate::node::IrohNode::new(node_handle.clone(), iroh_secret.clone()).await
         {
             transport.add_node(node.clone()).await;
             Ok(node
@@ -108,14 +123,20 @@ pub extern "C" fn iroh_node_new(
         }
     }) {
         Ok(_) => {
-            debug!("[rust] IrohNode created with handle: {}", node_handle);
+            debug!(
+                "[rust-node-{}] IrohNode created with handle: {}",
+                node_handle, node_handle
+            );
             unsafe {
                 *out_handle = IrohNodeHandle(node_handle);
             }
             0i32
         }
         Err(err) => {
-            warn!("[rust] failed to create IrohNode: {}", err);
+            warn!(
+                "[rust-node-{}] failed to create IrohNode: {}",
+                node_handle, err
+            );
             -1i32
         }
     }
@@ -128,18 +149,19 @@ pub extern "C" fn iroh_listen(
     out_listener: *mut IrohListenerHandle,
 ) -> i32 {
     if out_listener.is_null() {
-        warn!("[rust] out_listener is null");
+        warn!("[rust-node-{}] out_listener is null", node.0);
         return -1;
     }
+    debug!("[rust-node-{}] listening on: {:?}", node.0, listen_maddr);
 
     let listen_addr_str =
         if let Ok(listen_addr_str) = unsafe { CStr::from_ptr(listen_maddr) }.to_str() {
             listen_addr_str
         } else {
-            warn!("[rust] failed to decode listen address");
+            warn!("[rust-node-{}] failed to decode listen address", node.0);
             return -1;
         };
-    debug!("[rust] listening on: {listen_addr_str}");
+    debug!("[rust-node-{}] listening on: {listen_addr_str}", node.0);
 
     match run_on_runtime(Token::Node(node.0), async move {
         let transport = crate::STATE
@@ -161,7 +183,7 @@ pub extern "C" fn iroh_listen(
             0i32
         }
         Err(err) => {
-            error!("[rust] failed to listen: {}", err);
+            warn!("[rust-node-{}] failed to listen: {}", node.0, err);
             -1i32
         }
     }
@@ -173,6 +195,7 @@ pub extern "C" fn iroh_accept(
     _timeout_ms: u64,
     out_stream: *mut IrohStreamHandle,
 ) -> i32 {
+    debug!("[rust-listener-{}] accepting stream", listener.0);
     match run_on_runtime(Token::Node(listener.0), async move {
         let transport = crate::STATE
             .get_transport_by_node_handle(listener.0)
@@ -200,12 +223,20 @@ pub extern "C" fn iroh_accept(
         stream.get_handle().await
     }) {
         Ok(stream_handle) => {
-            debug!("[rust] accepted stream with handle: {}", stream_handle);
+            debug!(
+                "[rust-listener-{}] accepted stream with handle: {}",
+                listener.0, stream_handle
+            );
             unsafe { *out_stream = IrohStreamHandle(stream_handle) }
             0
         }
         Err(err) => {
-            error!("[rust] failed to accept stream: {}", err);
+            if err.to_string() != "request cancelled" {
+                warn!(
+                    "[rust-listener-{}] failed to accept stream: {}",
+                    listener.0, err
+                );
+            }
             -1i32
         }
     }
@@ -225,15 +256,18 @@ pub extern "C" fn iroh_dial(
         if let Ok(remote_addr_str) = unsafe { CStr::from_ptr(_remote_maddr) }.to_str() {
             remote_addr_str
         } else {
-            warn!("[rust] failed to decode remote address");
+            warn!("[rust-node-{}] failed to decode remote address", node.0);
             return -1;
         };
-    debug!("[rust] dialing: {remote_addr_str}");
+    debug!("[rust-node-{}] dialing: {remote_addr_str}", node.0);
 
     let node_id = match crate::peer_id_to_ed25519_public_key(remote_addr_str) {
         Some(id) => id,
         _ => {
-            warn!("[rust] failed to decode peer id from multiaddr");
+            warn!(
+                "[rust-node-{}] failed to decode peer id from multiaddr",
+                node.0
+            );
             return -1;
         }
     };
@@ -261,12 +295,18 @@ pub extern "C" fn iroh_dial(
         node.connect(node_id).await
     }) {
         Ok(handle) => {
-            debug!("[rust] Stream created with handle: {}", handle);
+            debug!(
+                "[rust-stream-{}] Stream created with handle: {}",
+                handle, handle
+            );
             unsafe { *out_stream = IrohStreamHandle(handle) }
             0i32
         }
         Err(err) => {
-            error!("[rust] failed to dial remote node: {}", err);
+            warn!(
+                "[rust-stream-{}] failed to dial remote node: {}",
+                stream_handle, err
+            );
             -1i32
         }
     }
@@ -283,6 +323,10 @@ pub extern "C" fn iroh_stream_read(
     if buf.is_null() || out_n.is_null() {
         return -1i32;
     }
+    debug!(
+        "[rust-stream-{}] reading {} bytes from stream",
+        stream.0, len
+    );
     if len == 0 {
         unsafe {
             *out_n = 0;
@@ -304,8 +348,8 @@ pub extern "C" fn iroh_stream_read(
                 .ok_or_else(|| anyhow::anyhow!("invalid stream handle"))?;
 
             let size = stream.read(buf).await?;
-            info!(
-                "[rust-{}] read {} bytes from stream",
+            debug!(
+                "[rust-stream-{}] read {} bytes from stream",
                 stream.get_handle().await.unwrap_or(999),
                 size
             );
@@ -335,7 +379,12 @@ pub extern "C" fn iroh_stream_read(
             }
         }
         Err(err) => {
-            error!("[rust] failed to read from stream: {}", err);
+            if err.to_string() != "request cancelled" {
+                warn!(
+                    "[rust-stream-{}] failed to read from stream: {}",
+                    stream.0, err
+                );
+            }
             -1i32
         }
     }
@@ -350,6 +399,11 @@ pub extern "C" fn iroh_stream_write(
     out_n: *mut isize,
 ) -> i32 {
     let buf = unsafe { std::slice::from_raw_parts(buf, len) };
+    let stream_handle = stream.0;
+    debug!(
+        "[rust-stream-{}] writing {} bytes to stream",
+        stream_handle, len
+    );
 
     match run_on_runtime(Token::Stream(stream.0), async move {
         let write_fut = async {
@@ -364,7 +418,10 @@ pub extern "C" fn iroh_stream_write(
                 .ok_or_else(|| anyhow::anyhow!("invalid stream handle"))?;
 
             let size = stream.write(buf).await?;
-            info!("[rust] wrote {} bytes to stream", size);
+            debug!(
+                "[rust-stream-{}] wrote {} bytes to stream",
+                stream_handle, size
+            );
             Ok(size)
         };
 
@@ -383,7 +440,12 @@ pub extern "C" fn iroh_stream_write(
             0i32
         }
         Err(err) => {
-            error!("[rust] failed to write to stream: {}", err);
+            if err.to_string() != "request cancelled" {
+                warn!(
+                    "[rust-stream-{}] failed to write to stream: {}",
+                    stream.0, err
+                );
+            }
             -1i32
         }
     }
@@ -391,29 +453,32 @@ pub extern "C" fn iroh_stream_write(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn iroh_stream_close(stream: IrohStreamHandle) -> i32 {
+    debug!("[rust-stream-{}] closing stream", stream.0);
     match run_on_runtime(Token::Stream(stream.0), async move {
-        let transport = crate::STATE
-            .get_transport_by_stream_handle(stream.0)
-            .await
-            .ok_or_else(|| anyhow::anyhow!("transport must be created before close"))?;
+        if let Some(transport) = crate::STATE.get_transport_by_stream_handle(stream.0).await {
+            let node = transport
+                .get_node_by_stream_handle(stream.0)
+                .await
+                .ok_or_else(|| anyhow::anyhow!("invalid stream handle"))?;
 
-        let node = transport
-            .get_node_by_stream_handle(stream.0)
-            .await
-            .ok_or_else(|| anyhow::anyhow!("invalid stream handle"))?;
+            cancel_token_for(Token::Stream(stream.0));
 
-        cancel_token_for(Token::Stream(stream.0));
-
-        if node.get_stream_by_handle(stream.0).await.is_some() {
-            node.remove_stream_by_handle(stream.0).await;
-            debug!("[rust] closed stream with handle: {}", stream.0);
+            if node.get_stream_by_handle(stream.0).await.is_some() {
+                node.remove_stream_by_handle(stream.0).await;
+                debug!(
+                    "[rust-stream-{}] closed stream with handle: {}",
+                    stream.0, stream.0
+                );
+            }
         }
 
         Ok(())
     }) {
         Ok(_) => 0i32,
         Err(err) => {
-            error!("[rust] failed to close stream: {}", err);
+            if err.to_string() != "request cancelled" {
+                warn!("[rust-stream-{}] failed to close stream: {}", stream.0, err);
+            }
             -1i32
         }
     }
@@ -421,28 +486,36 @@ pub extern "C" fn iroh_stream_close(stream: IrohStreamHandle) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn iroh_listen_close(node_handle: IrohNodeHandle) -> i32 {
+    debug!("[rust-node-{}] closing listener", node_handle.0);
     match run_on_runtime(Token::Node(node_handle.0), async move {
-        let transport = crate::STATE
+        if let Some(transport) = crate::STATE
             .get_transport_by_node_handle(node_handle.0)
             .await
-            .ok_or_else(|| anyhow::anyhow!("transport must be created before close"))?;
-
-        if transport
-            .get_node_by_node_handle(node_handle.0)
-            .await
-            .is_some()
         {
-            cancel_token_for(Token::Node(node_handle.0));
+            if transport
+                .get_node_by_node_handle(node_handle.0)
+                .await
+                .is_some()
+            {
+                cancel_token_for(Token::Node(node_handle.0));
 
-            transport.remove_node_by_handle(node_handle.0).await;
-            debug!("[rust] closed node with handle: {}", node_handle.0);
+                transport.remove_node_by_handle(node_handle.0).await;
+                debug!(
+                    "[rust-node-{}] closed listener with handle: {}",
+                    node_handle.0, node_handle.0
+                );
+            }
         }
-
         Ok(())
     }) {
         Ok(_) => 0i32,
         Err(err) => {
-            error!("[rust] failed to close stream: {}", err);
+            if err.to_string() != "request cancelled" {
+                warn!(
+                    "[rust-node-{}] failed to close listener: {}",
+                    node_handle.0, err
+                );
+            }
             -1i32
         }
     }
@@ -450,22 +523,26 @@ pub extern "C" fn iroh_listen_close(node_handle: IrohNodeHandle) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn iroh_transport_close(transport_handle: IrohTransportHandle) -> i32 {
+    debug!("[rust-transport-{}] closing transport", transport_handle.0);
     match run_on_runtime(Token::Transport(transport_handle.0), async move {
         if crate::STATE
             .get_transport_by_transport_handle(transport_handle.0)
             .await
             .is_some()
         {
-            crate::STATE
-                .remove_transport(transport_handle.0)
-                .await;
+            crate::STATE.remove_transport(transport_handle.0).await;
             cancel_token_for(Token::Transport(transport_handle.0));
         }
         Ok(())
     }) {
         Ok(_) => 0i32,
         Err(err) => {
-            error!("[rust] failed to close stream: {}", err);
+            if err.to_string() != "request cancelled" {
+                error!(
+                    "[rust-transport-{}] failed to close transport: {}",
+                    transport_handle.0, err
+                );
+            }
             -1i32
         }
     }
@@ -476,7 +553,7 @@ pub extern "C" fn iroh_shutdown() -> i32 {
     match shutdown_runtime() {
         Ok(_) => 0i32,
         Err(err) => {
-            error!("[rust] failed to shutdown runtime: {}", err);
+            error!("[rust-runtime] failed to shutdown runtime: {}", err);
             -1i32
         }
     }

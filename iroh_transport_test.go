@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	transport2 "github.com/libp2p/go-libp2p/core/transport"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/rustonbsd/go-libp2p-iroh-transport/ffi"
 )
 
 // buildTestHost creates a libp2p host that ONLY uses the iroh transport.
@@ -86,17 +85,7 @@ func TestIrohTransportPeerConnection(t *testing.T) {
 	if len(hB.Network().ConnsToPeer(hA.ID())) == 0 || len(hA.Network().ConnsToPeer(hB.ID())) == 0 {
 		t.Fatalf("expected connection entries on both peers")
 	}
-
-	fmt.Printf("Closing hosts...\n")
-	hA.Close()
-	fmt.Printf("Host A closed.\n")
-	hB.Close()
-	fmt.Printf("Host B closed.\n")
-
 	fmt.Printf("Test passed - connections established!\n")
-
-	ffi.Shutdown()
-	time.Sleep(2 * time.Second)
 }
 
 // TestCanDialBasic ensures CanDial accepts TCP/UDP IP multiaddrs and rejects others.
