@@ -7,8 +7,11 @@ A tiny libp2p Transport that routes all traffic over iroh (QUIC) via a small Rus
 - [x] create two libp2p nodes with iroh transport only and have them connect successfully
 - [x] Centeralize all ffi bindings in cgo_wrapper.go and only import wrapped handles in conn and transport (fine for this prototype for now)
 - [x] add iroh multi address support (dial and listen)
-- [ ] fix listener closed bug (implement propper listener close)
+- [x] fix listener closed bug (implement propper listener close)
 - [x] add docker local isolated network integration test (in defradb) (proof new capability vs vanilla defradb in cold bootstrapping)
+- [x] fix e2e test (connects, sends, closes but then never exits)
+- [x] unblock all io (use tokio handler)
+- [x] get rid of remapping linker symbols
 - [ ] add cicd pipeline
 - [ ] benchmark
 - [ ] 3rd party code review
@@ -29,7 +32,7 @@ ok      github.com/rustonbsd/go-libp2p-iroh-transport   2.166s
 ## Install
 
 ```bash
-go get github.com/rustonbsd/go-libp2p-iroh-transport@v0.0.2
+go get github.com/rustonbsd/go-libp2p-iroh-transport@v0.1.0
 ```
 
 ## Build
