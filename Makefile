@@ -34,6 +34,6 @@ build-rust-linux:
 
 .PHONY: test
 test:
-	go test .
+	RUST_LOG=error,irohffi::ffi=debug go test
 	cd rust && \
-	cargo test
+	RUST_LOG=error,irohffi::ffi=debug cargo test
