@@ -28,6 +28,10 @@ impl State {
         Ok(())
     }
 
+    pub async fn remove_transport(&self, handle: u64) {
+        self.transports.lock().await.remove(&handle);
+    }
+
     pub async fn get_transport_by_node_handle(&self, handle: u64) -> Option<IrohTransport> {
         let values = self
             .transports
@@ -37,7 +41,7 @@ impl State {
             .cloned()
             .collect::<Vec<_>>();
         for transport in values {
-            if transport.get_node_by_handle(handle).await.is_some() {
+            if transport.get_node_by_node_handle(handle).await.is_some() {
                 return Some(transport.clone());
             }
         }

@@ -63,6 +63,10 @@ int32_t iroh_stream_write(struct IrohStreamHandle stream,
 
 int32_t iroh_stream_close(struct IrohStreamHandle stream);
 
+int32_t iroh_listen_close(struct IrohNodeHandle node_handle);
+
+int32_t iroh_transport_close(struct IrohTransportHandle transport_handle);
+
 int32_t iroh_shutdown(void);
 
 #endif  /* IROHFFI_H */

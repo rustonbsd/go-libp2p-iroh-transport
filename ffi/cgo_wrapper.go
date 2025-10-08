@@ -26,7 +26,6 @@ var libAmd64 []byte
 var libArm64 []byte
 
 var (
-	initOnce    sync.Once
 	extractOnce sync.Once
 	libPath     string
 )
@@ -53,7 +52,5 @@ func Init() {
 		if err := os.WriteFile(libPath, libData, 0755); err != nil {
 			panic("failed to extract library: " + err.Error())
 		}
-	})
-	initOnce.Do(func() {
 	})
 }

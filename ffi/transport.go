@@ -80,6 +80,30 @@ func Dial(node NodeHandle, p peer.ID) (StreamHandle, error) {
 	return s, nil
 }
 
+func ListenClose(l ListenerHandle) error {
+	rc := C.iroh_listen_close(C.IrohNodeHandle(l))
+	if rc != 0 {
+		return fmt.Errorf("iroh_listen_close rc=%d", int(rc))
+	}
+	return nil
+}
+
+func NodeClose(n NodeHandle) error {
+	rc := C.iroh_listen_close(n)
+	if rc != 0 {
+		return fmt.Errorf("iroh_node_close rc=%d", int(rc))
+	}
+	return nil
+}
+
+func TransportClose(t TransportHandle) error {
+	rc := C.iroh_transport_close(t)
+	if rc != 0 {
+		return fmt.Errorf("iroh_transport_close rc=%d", int(rc))
+	}
+	return nil
+}
+
 func Shutdown() error {
 	rc := C.iroh_shutdown()
 	if rc != 0 {

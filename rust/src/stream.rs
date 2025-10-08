@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use std::{collections::hash_map::Entry, sync::Arc};
 
 use iroh::endpoint::VarInt;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, sync::Mutex};
 use tracing::{debug, warn};
 
-use crate::actor::{Action, Actor, Handle};
+use crate::{actor::{Action, Actor, Handle}, runtime::Token};
 
 #[derive(Debug, Clone)]
 pub struct IrohStream {
@@ -62,7 +62,7 @@ impl IrohStream {
         };
 
         // Spawn the stream actor – no handshake / blocking wait.
-        crate::runtime_handle()?.spawn(async move {
+        crate::runtime::runtime_handle()?.spawn(async move {
             let mut actor =
                 match IrohStreamActor::new(rx, handle, conn).await {
                     Ok(a) => a,
@@ -156,6 +156,21 @@ impl IrohStreamActor {
 
 impl Actor for IrohStreamActor {
     async fn run(&mut self) -> anyhow::Result<()> {
+        let cancelation_token = tokio_util::sync::CancellationToken::new();
+        let tokens = crate::runtime::get_cancellation_tokens();
+        {
+            let mut tokens = tokens.lock().await;
+            let entry = tokens.entry(Token::Stream(self.handle));
+            match entry {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(cancelation_token.clone());
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![cancelation_token.clone()]);
+                }
+            }
+        }
+
         while self.actor_status == ActorStatus::Running {
             tokio::select! {
                 Some(action) = self.rx.recv() => {
@@ -164,13 +179,13 @@ impl Actor for IrohStreamActor {
                         break;
                     }
                     res
-                    
+
                 },
-                _ = tokio::signal::ctrl_c() => break,
+                _ = cancelation_token.cancelled() => break,
             }
         }
 
         self.actor_status = ActorStatus::Stopped;
-        Ok(())
+        Err(anyhow::anyhow!("IrohStreamActor exited"))
     }
 }

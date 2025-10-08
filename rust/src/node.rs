@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use iroh::protocol::ProtocolHandler;
 use tracing::{debug, info, warn};
 
 use crate::{
     actor::{Action, Actor, Handle},
+    runtime::Token,
     stream::{ConnectionShould, IrohStream},
 };
 
@@ -47,7 +48,7 @@ impl IrohNode {
             .spawn();
         actor.set_router(router).await;
 
-        crate::runtime_handle()?.spawn(async move {
+        crate::runtime::runtime_handle()?.spawn(async move {
             debug!("[rust] IrohNodeActor started");
             if let Err(e) = actor.run().await {
                 warn!("[rust] IrohNodeActor exited with error: {:?}", e);
@@ -192,15 +193,29 @@ impl IrohNodeActor {
 
 impl Actor for IrohNodeActor {
     async fn run(&mut self) -> anyhow::Result<()> {
+        let cancelation_token = tokio_util::sync::CancellationToken::new();
+        let tokens = crate::runtime::get_cancellation_tokens();
+        {
+            let mut tokens = tokens.lock().await;
+            let entry = tokens.entry(Token::Node(self.handle));
+            match entry {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(cancelation_token.clone());
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![cancelation_token.clone()]);
+                }
+            }
+        }
         loop {
             tokio::select! {
                 Some(action) = self.rx.recv() => {
                     action(self).await
                 }
-                _ = tokio::signal::ctrl_c() => break,
+                _ = cancelation_token.cancelled() => break,
             }
         }
-        Ok(())
+        Err(anyhow::anyhow!("IrohNodeActor exited"))
     }
 }
 
