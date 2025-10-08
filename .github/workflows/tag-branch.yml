@@ -24,17 +24,13 @@ jobs:
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           echo "Branch name: $BRANCH_NAME"
           echo "Commit SHA: $GITHUB_SHA"
-          
-          # Delete the tag if it already exists (both locally and remotely)
-          if git rev-parse "$BRANCH_NAME" >/dev/null 2>&1; then
-            echo "Tag $BRANCH_NAME already exists, deleting it..."
-            git tag -d "$BRANCH_NAME"
-            git push origin ":refs/tags/$BRANCH_NAME" || true
-          fi
-          
+
+          # Delete the remote tag if it exists
+          git push origin ":refs/tags/$BRANCH_NAME" 2>/dev/null || echo "Remote tag $BRANCH_NAME does not exist, creating new one..."
+
           # Create new tag at current commit
           git tag "$BRANCH_NAME" "$GITHUB_SHA"
-          
+
           # Push the tag
           git push origin "$BRANCH_NAME"
         env:
