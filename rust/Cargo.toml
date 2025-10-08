@@ -3,7 +3,7 @@ name = "irohffi"
 description = "libp2p iroh transport integration"
 authors = ["Zacharias Boehler <rustonbsd@mailfence.com>"]
 readme = "../README.md"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [build-dependencies]
