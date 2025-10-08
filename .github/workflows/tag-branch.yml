@@ -29,10 +29,10 @@ jobs:
           git push origin ":refs/tags/$BRANCH_NAME" 2>/dev/null || echo "Remote tag $BRANCH_NAME does not exist, creating new one..."
 
           # Create new tag at current commit
-          git tag "$BRANCH_NAME" "$GITHUB_SHA"
+          git tag -f "$BRANCH_NAME" "$GITHUB_SHA"
 
-          # Push the tag
-          git push origin "$BRANCH_NAME"
+          # Push the tag explicitly using refs/tags/
+          git push origin "refs/tags/$BRANCH_NAME"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
