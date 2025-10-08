@@ -12,14 +12,14 @@ cbindgen = "0.29"
 [dependencies]
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-iroh = { version = "0.91", default-features = false }
+iroh = { version = "0.92", default-features = false }
 ed25519-dalek = { version = "2.2", features = ["hazmat"], default-features = false}
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread","macros","time"] }
 anyhow = "1"
 futures = { version = "0.3", default-features = false, features = ["std"] }
 once_cell = "1"
 bs58 = "0.5"
-libc = "0.2.2"
+libc = "0.2"
 
 [lib]
 name = "irohffi"

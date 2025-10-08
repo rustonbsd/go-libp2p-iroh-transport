@@ -4,9 +4,9 @@ package ffi
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/include
-#cgo LDFLAGS: -ldl -lpthread -lm
+#cgo linux,amd64 LDFLAGS: ${SRCDIR}/libs/libiroh_x86_64_unknown_linux_gnu.so -ldl -lpthread -lm
+#cgo linux,arm64 LDFLAGS: ${SRCDIR}/libs/libiroh_aarch64_unknown_linux_gnu.so -ldl -lpthread -lm
 #include "libirohffi.h"
-#include <stdlib.h>
 */
 import "C"
 import (

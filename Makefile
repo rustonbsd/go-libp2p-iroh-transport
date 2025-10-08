@@ -34,6 +34,6 @@ build-rust-linux:
 
 .PHONY: test
 test:
-	@go test .
-	@cd rust && \
+	go test .
+	cd rust && \
 	cargo test
