@@ -1,0 +1,42 @@
+name: Tag Branch on Push
+
+on:
+  push:
+    branches:
+      - '**'
+jobs:
+  tag-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all tags and branches
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Tag commit with branch name
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "Branch name: $BRANCH_NAME"
+          echo "Commit SHA: $GITHUB_SHA"
+          
+          # Delete the tag if it already exists (both locally and remotely)
+          if git rev-parse "$BRANCH_NAME" >/dev/null 2>&1; then
+            echo "Tag $BRANCH_NAME already exists, deleting it..."
+            git tag -d "$BRANCH_NAME"
+            git push origin ":refs/tags/$BRANCH_NAME" || true
+          fi
+          
+          # Create new tag at current commit
+          git tag "$BRANCH_NAME" "$GITHUB_SHA"
+          
+          # Push the tag
+          git push origin "$BRANCH_NAME"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
