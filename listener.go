@@ -16,7 +16,7 @@ type IrohListener struct {
 }
 
 func (l IrohListener) Accept() (manet.Conn, error) {
-	// Pick a sane timeout; or block forever if you prefer
+	// 30 seconds seems reasonable with the added cancelation token
 	h, err := ffi.Accept(l.h, 30*time.Second)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (l IrohListener) Accept() (manet.Conn, error) {
 }
 
 func (l IrohListener) Close() error {
-	return nil
+	return ffi.ListenClose(l.h)
 }
 
 func (l IrohListener) Addr() net.Addr {

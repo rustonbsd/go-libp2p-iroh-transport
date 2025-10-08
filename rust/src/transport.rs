@@ -1,10 +1,11 @@
 use iroh::NodeId;
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 use tracing::warn;
 
 use crate::{
     actor::{Action, Actor, Handle},
     node::IrohNode,
+    runtime::Token,
 };
 
 #[derive(Debug, Clone)]
@@ -22,7 +23,7 @@ struct IrohTransportActor {
 impl IrohTransport {
     pub fn new(handle: u64) -> anyhow::Result<Self> {
         let (api, rx) = Handle::channel(1024);
-        crate::runtime_handle()?.spawn(async move {
+        crate::runtime::runtime_handle()?.spawn(async move {
             let mut actor = IrohTransportActor {
                 rx,
                 handle,
@@ -42,7 +43,7 @@ impl IrohTransport {
             .ok()
     }
 
-    pub async fn get_node_by_handle(&self, handle: u64) -> Option<IrohNode> {
+    pub async fn get_node_by_node_handle(&self, handle: u64) -> Option<IrohNode> {
         self.api
             .call(move |actor| {
                 Box::pin(async move {
@@ -120,6 +121,15 @@ impl IrohTransport {
             .await
             .ok()
     }
+
+    pub async fn remove_node_by_handle(&self, handle: u64) {
+        let _ = self
+            .api
+            .call(move |actor| {
+                Box::pin(async move { Ok(actor.remove_node_by_handle(handle).await) })
+            })
+            .await;
+    }
 }
 
 impl IrohTransportActor {
@@ -165,14 +175,36 @@ impl IrohTransportActor {
         self.nodes.insert(handle, node);
         Ok(())
     }
+
+    async fn remove_node_by_handle(&mut self, handle: u64) {
+        if self.nodes.get(&handle).is_some() {
+            self.nodes.remove(&handle);
+        }
+    }
 }
 
 impl Actor for IrohTransportActor {
     async fn run(&mut self) -> anyhow::Result<()> {
+        let cancelation_token = tokio_util::sync::CancellationToken::new();
+        let tokens = crate::runtime::get_cancellation_tokens();
+        {
+            let mut tokens = tokens.lock().await;
+            let entry = tokens.entry(Token::Transport(self.handle));
+            match entry {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(cancelation_token.clone());
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![cancelation_token.clone()]);
+                }
+            }
+        }
         loop {
             tokio::select! {
                 Some(action) = self.rx.recv() => action(self).await,
+                _ = cancelation_token.cancelled() => break,
             }
         }
+        Err(anyhow::anyhow!("IrohTransportActor exited"))
     }
 }

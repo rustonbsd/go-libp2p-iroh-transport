@@ -87,8 +87,11 @@ func TestIrohTransportPeerConnection(t *testing.T) {
 		t.Fatalf("expected connection entries on both peers")
 	}
 
+	fmt.Printf("Closing hosts...\n")
 	hA.Close()
+	fmt.Printf("Host A closed.\n")
 	hB.Close()
+	fmt.Printf("Host B closed.\n")
 
 	fmt.Printf("Test passed - connections established!\n")
 
